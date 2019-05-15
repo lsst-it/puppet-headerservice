@@ -12,17 +12,46 @@ class headerservice(
   String $salpytools_git_repo,
   String $header_service_repo,
   String $header_service_repo_path,
+  Array $sal_dependency_list,
+  String $lsst_sal_repo_url,
+  String $setup_env_path,
+  String $setup_env_content,
 ){
 
-  include ts_sal
-  $ts_sal_path = lookup('ts_sal::ts_sal_path')
+  # configure the repo we want to use
+  yumrepo { 'lsst_sal':
+    enabled  => 1,
+    descr    => 'LSST Sal Repo',
+    baseurl  => $lsst_sal_repo_url,
+    gpgcheck => 0,
+  }
 
-  class{ 'ts_xml':
-    ts_xml_path       => lookup('ts_xml::ts_xml_path'),
-    ts_xml_subsystems => lookup('headerservice::ts_xml_subsystems'),
-    ts_xml_languages  => lookup('headerservice::ts_xml_languages'),
-    ts_sal_path       => $ts_sal_path,
-    require           => Class['ts_sal']
+  package{'epel-release':
+    ensure => installed,
+  }
+
+  # Temporary hotfix
+  ###############################################
+  user{ 'salmgr':
+    ensure     => 'present',
+    uid        => '501' ,
+    gid        => '500',
+    home       => '/home/salmgr',
+    managehome => true,
+    require    => Group['lsst'],
+    password   => lookup('salmgr_pwd'),
+  }
+
+  file{ $setup_env_path:
+    ensure  => file,
+    content => $setup_env_content
+  }
+
+  $sal_dependency_list.each | $dependency | {
+    package{ $dependency:
+      ensure  => installed,
+      require => Yumrepo['lsst_sal']
+    }
   }
 
   if ! defined(Package["${lsst_python["package"]}-devel"]) {
