@@ -16,6 +16,7 @@ class headerservice(
   String $lsst_sal_repo_url,
   String $setup_env_path,
   String $setup_env_content,
+  String $ts_sal_path,
 ){
 
   # configure the repo we want to use
@@ -104,7 +105,7 @@ class headerservice(
     path    => '/bin/',
     #TODO Change this with a better condition
     onlyif  => "test ! -d  /usr/${lsst_python["lib_path"]}/python${lsst_python["version"]}/site-packages/fitsio*",
-    require => [File[$lsst_software_repo], Vcsrepo[$salpytools_repo_path], Vcsrepo[$dmhs_repo_path]]
+    require => [File[$lsst_software_repo], Vcsrepo[$salpytools_repo_path], Vcsrepo[$header_service_repo_path]]
   }
   ~>  exec{ 'install-custom-fitsio':
         path    => '/bin/:/usr/bin',
@@ -126,13 +127,13 @@ class headerservice(
           }
           ~>  exec { 'Install HeaderService':
                 path        => '/bin',
-                cwd         => $dmhs_repo_path,
+                cwd         => $header_service_repo_path,
                 user        => 'salmgr',
                 group       => 'lsst',
                 command     => "/bin/python${lsst_python["major"]} setup.py install \
-                                --prefix=${dmhs_install_path} \
-                                --install-lib=${dmhs_install_path}/python",
-                require     => [Vcsrepo[$dmhs_repo_path], File[$dmhs_install_path], File["/bin/python${lsst_python["major"]}"]],
+                                --prefix=${header_service_install_path} \
+                                --install-lib=${header_service_install_path}/python",
+                require     => [Vcsrepo[$header_service_repo_path], File[$header_service_install_path], File["/bin/python${lsst_python["major"]}"]],
                 refreshonly => true,
               }
               ~>  exec { 'Create environment for HeaderService':
@@ -140,11 +141,11 @@ class headerservice(
                     group   => 'lsst',
                     path    => [ '/usr/bin', '/bin', '/usr/sbin' , '/usr/local/bin'],
                     command => "/bin/bash -c 'source ${ts_sal_path}/setup.env ; \
-                                source ${dmhs_install_path}/setpath.sh ${dmhs_install_path} ; \
+                                source ${header_service_install_path}/setpath.sh ${header_service_install_path} ; \
                                 source ${salpytools_install_path}/setpath.sh ${salpytools_install_path}; \
-                                env > ${dmhs_install_path}/headerservice.env'",
-                    onlyif  => "test ! -f ${dmhs_install_path}/headerservice.env",
-                    require => [File[$dmhs_install_path], File[$salpytools_install_path]]
+                                env > ${header_service_install_path}/headerservice.env'",
+                    onlyif  => "test ! -f ${header_service_install_path}/headerservice.env",
+                    require => [File[$header_service_install_path], File[$salpytools_install_path]]
                   }
 
   file { $lsst_software_install :
@@ -203,7 +204,7 @@ class headerservice(
   vcsrepo { $header_service_repo_path:
     ensure   => present,
     provider => git,
-    source   => $dmhs_git_repo,
+    source   => $header_service_repo,
     revision => lookup('headerservice::header_service_current_tag'),
     owner    => 'salmgr',
     group    => 'lsst',
