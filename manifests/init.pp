@@ -143,6 +143,7 @@ class headerservice(
                     command => "/bin/bash -c 'source ${ts_sal_path}/setup.env ; \
                                 source ${header_service_install_path}/setpath.sh ${header_service_install_path} ; \
                                 source ${salpytools_install_path}/setpath.sh ${salpytools_install_path}; \
+                                source /etc/setup_sal.env; \
                                 env > ${header_service_install_path}/headerservice.env'",
                     onlyif  => "test ! -f ${header_service_install_path}/headerservice.env",
                     require => [File[$header_service_install_path], File[$salpytools_install_path]]
