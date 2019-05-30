@@ -222,7 +222,7 @@ class headerservice(
         'startPath'          => $header_service_install_path,
         'serviceCommand'     => "/bin/python${lsst_python["major"]} ${header_service_install_path}/bin/DMHS_ATS_configurable  \
                                 -c ${header_service_install_path}/etc/conf/atTelemetry.yaml \
-                                --filepath ${header_service_repo_path[1]}",
+                                --filepath ${header_service_repo_path}",
         'systemdUser'        => 'salmgr',
         'environmentFile'    => "${header_service_install_path}/headerservice.env"
       }
