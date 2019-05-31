@@ -8,7 +8,7 @@ class headerservice(
   String $lsst_software_repo,
   String $fitsio_source,
   String $fitsio_filename,
-  Array $header_service_www_output,
+  String $header_service_www_output,
   String $salpytools_git_repo,
   String $header_service_repo,
   String $header_service_repo_path,
@@ -18,6 +18,9 @@ class headerservice(
   String $setup_env_content,
   String $ts_sal_path,
 ){
+
+  #TODO This must be added as a requirement for the module
+  include stdlib
 
   # configure the repo we want to use
   yumrepo { 'lsst_sal':
@@ -100,6 +103,23 @@ class headerservice(
     require  => File["/bin/pip${lsst_python["major"]}"],
   }
 
+  #Verify that all dirs listed in headerservice::header_service_www_output exists.  
+  $basename = basename($header_service_www_output)
+  $dirname = split($header_service_www_output , '/')[1,-1]
+  $aux = '/'
+  $dirname.each | $index, $subdir | {
+    $joined_path = join($dirname[0 , $index+1], "/")
+    $path = "/${joined_path}"
+    notify{"[${dirname}] - ${index}: Checking dir: ${path}":}
+    if ! defined($path){
+      file{ $path:
+        ensure => directory,
+        owner  => 'salmgr',
+        group  => 'lsst',
+      }
+    }
+  }
+
   exec { 'get-custom-fitsio':
     command => "wget ${fitsio_source} -O ${lsst_software_repo}/${fitsio_filename}.tar.gz",
     path    => '/bin/',
@@ -143,10 +163,10 @@ class headerservice(
                     command => "/bin/bash -c 'source ${ts_sal_path}/setup.env ; \
                                 source ${header_service_install_path}/setpath.sh ${header_service_install_path} ; \
                                 source ${salpytools_install_path}/setpath.sh ${salpytools_install_path}; \
-                                source /etc/setup_sal.env; \
+                                source ${$setup_env_path}; \
                                 env > ${header_service_install_path}/headerservice.env'",
                     onlyif  => "test ! -f ${header_service_install_path}/headerservice.env",
-                    require => [File[$header_service_install_path], File[$salpytools_install_path]]
+                    require => [File[$header_service_install_path], File[$salpytools_install_path], File[$setup_env_path]]
                   }
 
   file { $lsst_software_install :
@@ -222,7 +242,7 @@ class headerservice(
         'startPath'          => $header_service_install_path,
         'serviceCommand'     => "/bin/python${lsst_python["major"]} ${header_service_install_path}/bin/DMHS_ATS_configurable  \
                                 -c ${header_service_install_path}/etc/conf/atTelemetry.yaml \
-                                --filepath ${header_service_repo_path}",
+                                --filepath ${header_service_www_output}",
         'systemdUser'        => 'salmgr',
         'environmentFile'    => "${header_service_install_path}/headerservice.env"
       }
