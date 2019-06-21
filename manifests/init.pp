@@ -17,6 +17,9 @@ class headerservice(
   String $setup_env_path,
   String $setup_env_content,
   String $ts_sal_path,
+  String $header_service_prefix,
+  String $header_service_executable,
+  String $header_service_configuration
 ){
 
   #TODO This must be added as a requirement for the module
@@ -232,16 +235,16 @@ class headerservice(
     require  => [File[$lsst_software_repo]]
   }
 
-  file { '/etc/systemd/system/ATHeaderService_CSC.service':
+  file { "/etc/systemd/system/${header_service_prefix}HeaderService_CSC.service":
     ensure  => present,
     mode    => '0644',
     owner   => 'root',
     group   => 'root',
     content => epp('headerservice/systemd_unit_template.epp',
-      { 'serviceDescription' => 'Runner for ATHeaderService CSC',
+      { 'serviceDescription' => "Runner for ${header_service_prefix}HeaderService CSC",
         'startPath'          => $header_service_install_path,
-        'serviceCommand'     => "/bin/python${lsst_python["major"]} ${header_service_install_path}/bin/DMHS_ATS_configurable  \
-                                -c ${header_service_install_path}/etc/conf/atTelemetry.yaml \
+        'serviceCommand'     => "/bin/python${lsst_python["major"]} ${header_service_install_path}/bin/${header_service_executable}  \
+                                -c ${header_service_install_path}/etc/conf/${header_service_configuration} \
                                 --filepath ${header_service_www_output}",
         'systemdUser'        => 'salmgr',
         'environmentFile'    => "${header_service_install_path}/headerservice.env"
@@ -251,10 +254,10 @@ class headerservice(
     require => Exec['Create environment for HeaderService']
   }
 
-  service { 'ATHeaderService_CSC':
+  service { "${header_service_prefix}HeaderService_CSC":
     ensure  => running,
     enable  => true,
-    require => [File['/etc/systemd/system/ATHeaderService_CSC.service']]
+    require => [File["/etc/systemd/system/${header_service_prefix}HeaderService_CSC.service"]]
   }
 
   exec{ 'Systemd daemon reload':
